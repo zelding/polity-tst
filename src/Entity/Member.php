@@ -24,6 +24,11 @@ class Member
     #[ORM\Column(length: 255)]
     private ?string $nationalPoliticalGroup = null;
 
+    public function setId(int $id) :static
+    {
+        $this->id = $id;
+        return $this;
+    }
 
     public function getId(): ?int
     {

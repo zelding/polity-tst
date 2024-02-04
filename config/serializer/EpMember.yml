@@ -1,0 +1,12 @@
+\App\Model\EpMember:
+  properties:
+    id:
+      type: integer
+    fullName:
+      type: string
+    country:
+      type: string
+    politicalGroup:
+      type: string
+    nationalPoliticalGroup:
+      type: string
