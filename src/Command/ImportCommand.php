@@ -5,7 +5,9 @@ namespace App\Command;
 use App\Entity\Member;
 use App\Model\EpMember;
 use App\Model\EpMemberCollection;
+use App\Repository\MemberRepository;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use JMS\Serializer\SerializerInterface;
 use SimpleXMLElement;
@@ -26,22 +28,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class ImportCommand extends Command
 {
     protected string $url;
-    private EntityManager $entityManager;
-    private HttpClientInterface $httpClient;
-    //private SerializerInterface $serializer;
 
     public function __construct(
-        ContainerInterface $container,
-        HttpClientInterface $httpClient,
-        //SerializerInterface $serializer
+        ContainerInterface                   $container,
+        private readonly HttpClientInterface $httpClient,
+        private readonly MemberRepository    $memberRepository,
+        private readonly EntityManagerInterface $entityManager
+        //private SerializerInterface $serializer
     )
     {
         parent::__construct();
 
         $this->url = $container->getParameter('ep_url');
-        $this->entityManager = $container->get('doctrine.orm.default_entity_manager');
-        $this->httpClient = $httpClient;
-        //$this->serializer = $serializer;
     }
 
     protected function configure(): void
@@ -60,6 +58,7 @@ class ImportCommand extends Command
 
         if (!$batchSize || $batchSize < 1 || !is_numeric($batchSize) ) {
             $io->error("Batch size is invalid: $batchSize, should be a positive integer");
+            return Command::FAILURE;
         }
 
         $io->info("Importing ". $this->url);
@@ -68,9 +67,9 @@ class ImportCommand extends Command
         $this->entityManager->beginTransaction();
 
         try {
-            $xmlResponse = $this->httpClient->request("GET", $this->url, []);
+            $xmlResponse = $this->httpClient->request("GET", $this->url);
 
-            $xmlData = $xmlResponse->getContent(true);
+            $xmlData = $xmlResponse->getContent();
 
             $io->note("Xml data is ".strlen($xmlData). " long");
 
@@ -80,6 +79,13 @@ class ImportCommand extends Command
 
             foreach($classData['mep'] as $i => $member) {
                 $member = (array)$member;
+
+                if ($this->memberRepository->find($member['id']) ) {
+                    if($io->isDebug()) {
+                        $io->caution("Member ({$member['id']}) already imported, skipping");
+                    }
+                    continue;
+                }
 
                 $entity = new Member();
                 $entity->setId($member['id'])
@@ -106,9 +112,15 @@ class ImportCommand extends Command
         }
         catch (TransportExceptionInterface $exception) {
             $io->error("Connection error: `{$exception->getMessage()}`");
+            $this->entityManager->rollback();
+
+            return Command::FAILURE;
         }
         catch(ORMException $exception) {
+            $io->error("Database error: `{$exception->getMessage()}`");
             $this->entityManager->rollback();
+
+            return Command::FAILURE;
         }
 
         return Command::SUCCESS;

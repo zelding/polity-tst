@@ -29,4 +29,13 @@ services:
         arguments:
             - '@service_container'
             - '@http_client'
+            - '@App\Repository\MemberRepository'
+            - '@doctrine.orm.default_entity_manager'
             #- '@jms_serializer'
+
+    App\Command\ScrapeCommand:
+        arguments:
+            - ''
+            - '@App\Repository\MemberRepository'
+            - '@App\Repository\MemberContactRepository'
+            - '@doctrine.orm.default_entity_manager'
