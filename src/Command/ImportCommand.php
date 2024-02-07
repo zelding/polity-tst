@@ -2,9 +2,10 @@
 
 namespace App\Command;
 
+use App\Message\MemberImportMessage;
+use App\Model\EpMember;
 use App\Service\ImportInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Exception\ORMException;
+use Exception;
 use SimpleXMLElement;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 #[AsCommand(
@@ -24,10 +26,9 @@ class ImportCommand extends Command
     protected string $url;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
         private readonly ImportInterface        $importService,
+        private readonly MessageBusInterface    $messageBus,
         string $dataUrl
-        //private SerializerInterface $serializer
     )
     {
         parent::__construct();
@@ -55,14 +56,12 @@ class ImportCommand extends Command
 
         if (!$batchSize || $batchSize < 1 || !is_numeric($batchSize) ) {
             $io->error("Batch size is invalid: $batchSize, should be a positive integer");
-            return Command::FAILURE;
+            return Command::INVALID;
         }
 
         $io->info("Importing ". $this->url);
         $io->note("Running in ".($isDryRun ? "Dry" : "Normal")." mode");
         $io->note($isForced ? "Overwriting existing records" : "Skipping existing records");
-
-        $this->entityManager->beginTransaction();
 
         try {
             $xmlResponse = $this->importService->getRawData($this->url);
@@ -71,58 +70,37 @@ class ImportCommand extends Command
 
             $io->note("Xml data is ".strlen($xmlData). " long");
 
-            $classData = new SimpleXMLElement($xmlData);
+            try {
+                $classData = new SimpleXMLElement($xmlData);
+            }
+            catch(Exception $exception) {
+                $io->error($exception->getMessage());
+                return Command::FAILURE;
+            }
 
             $classData = (array)$classData;
 
-            foreach($classData['mep'] as $i => $member) {
+            $io->note("Found ".count($classData['mep']). " members");
+
+            foreach($classData['mep'] as $member) {
                 $member = (array)$member;
 
-                if ($this->importService->isStored($member['id']) ) {
-                    if($io->isDebug()) {
-                        $io->caution("Member ({$member['id']}) already imported");
-                    }
+                $memberModel = new EpMember($member);
 
-                    if ( !$isForced ) {
-                        continue;
-                    }
-
-                    // TODO: types
-                    //$this->importService->updateMemberData($member);
+                if($isDryRun) {
+                    $io->writeln(
+                        sprintf("Would dispatch member: %s - %s", $memberModel->getFullName(), $memberModel->getCountry())
+                    );
+                    continue;
                 }
 
-                /*$entity = new Member();
-                $entity->setId($member['id'])
-                       ->setFullName($member['fullName'])
-                       ->setCountry($member['country'])
-                       ->setEpPoliticalGroup($member['politicalGroup'])
-                       ->setNationalPoliticalGroup($member['nationalPoliticalGroup']);
-
-                $this->entityManager->persist($entity);*/
-
-                if ($i % $batchSize) {
-                    $this->entityManager->flush();
-                }
-            }
-
-            $this->entityManager->flush();
-
-            if($isDryRun) {
-                $this->entityManager->rollback();
-            }
-            else {
-                $this->entityManager->commit();
+                $this->messageBus->dispatch(
+                    new MemberImportMessage($memberModel, $isForced)
+                );
             }
         }
         catch (TransportExceptionInterface $exception) {
             $io->error("Connection error: `{$exception->getMessage()}`");
-            $this->entityManager->rollback();
-
-            return Command::FAILURE;
-        }
-        catch(ORMException $exception) {
-            $io->error("Database error: `{$exception->getMessage()}`");
-            $this->entityManager->rollback();
 
             return Command::FAILURE;
         }

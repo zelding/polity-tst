@@ -17,9 +17,7 @@ class ImportService implements ImportInterface
         private readonly EntityManagerInterface $entityManager,
         private readonly HttpClientInterface    $httpClient,
     )
-    {
-
-    }
+    {}
 
     public function isStored(int $memberId): bool
     {
@@ -36,6 +34,7 @@ class ImportService implements ImportInterface
             ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
 
         $this->entityManager->persist($entity);
+        $this->entityManager->flush();
 
         return $entity;
     }
@@ -49,6 +48,8 @@ class ImportService implements ImportInterface
             ->setCountry($member->getCountry())
             ->setEpPoliticalGroup($member->getPoliticalGroup())
             ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
+
+        $this->entityManager->flush();
 
         return $entity;
     }

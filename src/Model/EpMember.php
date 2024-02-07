@@ -14,6 +14,15 @@ class EpMember
 
     public string $nationalPoliticalGroup;
 
+    public function __construct(array $member)
+    {
+        $this->setId($member['id'])
+            ->setFullName($member['fullName'])
+            ->setCountry($member['country'])
+            ->setPoliticalGroup($member['politicalGroup'])
+            ->setNationalPoliticalGroup($member['nationalPoliticalGroup']);
+    }
+
     public function getId(): int
     {
         return $this->id;
