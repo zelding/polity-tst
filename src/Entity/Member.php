@@ -5,47 +5,36 @@ namespace App\Entity;
 use App\Repository\MemberRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\PersistentCollection;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: MemberRepository::class)]
-class Member implements \JsonSerializable
+class Member
 {
     #[ORM\Id]
     #[ORM\Column]
+    #[Groups(['list', 'details'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list', 'details'])]
     private ?string $fullName = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list', 'details'])]
     private ?string $country = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list', 'details'])]
     private ?string $epPoliticalGroup = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list', 'details'])]
     private ?string $nationalPoliticalGroup = null;
 
+    #[Groups(['details'])]
     #[ORM\OneToMany(targetEntity: MemberContact::class, mappedBy: "member", fetch: "EXTRA_LAZY", orphanRemoval: true)]
     private Collection $contacts;
 
-    public function jsonSerialize(): array
-    {
-        $base = [
-            'id'             => $this->id,
-            'firstName'      => $this->fullName,
-            'lastName'       => $this->fullName,
-            'country'        => $this->country,
-            'politicalGroup' => $this->epPoliticalGroup
-        ];
-
-        // this is where I would install the PHPLeague/Fractal - but I'M afraid it is not mainstream enough
-        if( $this->contacts instanceof PersistentCollection && $this->contacts->isInitialized()) {
-            $base['contacts'] = $this->contacts->toArray();
-        }
-
-        return $base;
-    }
 
     public function setId(int $id) :static
     {

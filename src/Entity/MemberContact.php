@@ -5,10 +5,13 @@ namespace App\Entity;
 use App\Model\MemberContactType;
 use App\Repository\MemberContactRepository;
 use Doctrine\ORM\Mapping as ORM;
-use JsonSerializable;
+use Symfony\Component\Serializer\Attribute\Context;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\Ignore;
+use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
 
 #[ORM\Entity(repositoryClass: MemberContactRepository::class)]
-class MemberContact implements JsonSerializable
+class MemberContact
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -16,21 +19,20 @@ class MemberContact implements JsonSerializable
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list'])]
+    // it serializes into {name: string, value: string}
+    // not sure, this is what you meant
+    #[Context(denormalizationContext: [BackedEnumNormalizer::class])]
     private ?MemberContactType $type;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list'])]
     private ?string $contactData;
 
     #[ORM\ManyToOne(targetEntity: Member::class, inversedBy: "contacts")]
+    #[Ignore] // otherwise cyclic ref error - maybe it can be done with maxDepth stuff, good enough for now
+    // something is fishy, the data disappeared from the response // TODO: later check enum
     private Member $member;
-
-    public function jsonSerialize(): array
-    {
-        return [
-            'type'  => $this->type->value,
-            'value' => $this->contactData,
-        ];
-    }
 
     public function getId(): ?int
     {

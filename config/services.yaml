@@ -27,15 +27,21 @@ services:
 
     App\Command\ImportCommand:
         arguments:
-            - '@service_container'
-            - '@http_client'
-            - '@App\Repository\MemberRepository'
-            - '@doctrine.orm.default_entity_manager'
-            #- '@jms_serializer'
+            $dataUrl: '%ep_url%'
 
     App\Command\ScrapeCommand:
         arguments:
-            - ''
+            - '@http_client'
             - '@App\Repository\MemberRepository'
             - '@App\Repository\MemberContactRepository'
             - '@doctrine.orm.default_entity_manager'
+
+    App\Controller\PersonController:
+        arguments:
+            $serializer: '@json_serializer'
+
+    json_serializer:
+        class: Symfony\Component\Serializer\Serializer
+        arguments:
+            - ['@serializer.normalizer.object', '@serializer.denormalizer.array', '@serializer.normalizer.backed_enum']
+            - ['@serializer.encoder.xml', '@serializer.encoder.json']

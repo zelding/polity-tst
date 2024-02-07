@@ -2,14 +2,9 @@
 
 namespace App\Command;
 
-use App\Entity\Member;
-use App\Model\EpMember;
-use App\Model\EpMemberCollection;
-use App\Repository\MemberRepository;
-use Doctrine\ORM\EntityManager;
+use App\Service\ImportInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
-use JMS\Serializer\SerializerInterface;
 use SimpleXMLElement;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -17,44 +12,46 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
-    name: 'ImportCommand',
+    name: 'import:ep_members',
     description: 'Import the EP members',
 )]
 class ImportCommand extends Command
 {
+    /** @var string the url to retrieve the members list */
     protected string $url;
 
     public function __construct(
-        ContainerInterface                   $container,
-        private readonly HttpClientInterface $httpClient,
-        private readonly MemberRepository    $memberRepository,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ImportInterface        $importService,
+        string $dataUrl
         //private SerializerInterface $serializer
     )
     {
         parent::__construct();
 
-        $this->url = $container->getParameter('ep_url');
+        $this->url = $dataUrl;
     }
 
     protected function configure(): void
     {
         $this
-            //->addArgument('batch_size', InputOption::VALUE_OPTIONAL, 'How many rows to insert at once', 50)
+            ->addArgument('batch_size', null, 'How many rows to insert at once', 50)
             // for some fucking reason this is considered an ARRAY argument
             ->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Don\'t make any actual changes')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Overwrite/Update existing records')
+            ->addUsage('php bin/console import:ep_members 50 -d -f')
         ;
     }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io        = new SymfonyStyle($input, $output);
         $isDryRun  = $input->getOption('dry-run');
-        $batchSize = /*$input->getArgument('batch_size') ??*/ 50;
+        $isForced  = $input->getOption('force');
+        $batchSize = $input->getArgument('batch_size');
 
         if (!$batchSize || $batchSize < 1 || !is_numeric($batchSize) ) {
             $io->error("Batch size is invalid: $batchSize, should be a positive integer");
@@ -63,11 +60,12 @@ class ImportCommand extends Command
 
         $io->info("Importing ". $this->url);
         $io->note("Running in ".($isDryRun ? "Dry" : "Normal")." mode");
+        $io->note($isForced ? "Overwriting existing records" : "Skipping existing records");
 
         $this->entityManager->beginTransaction();
 
         try {
-            $xmlResponse = $this->httpClient->request("GET", $this->url);
+            $xmlResponse = $this->importService->getRawData($this->url);
 
             $xmlData = $xmlResponse->getContent();
 
@@ -80,21 +78,27 @@ class ImportCommand extends Command
             foreach($classData['mep'] as $i => $member) {
                 $member = (array)$member;
 
-                if ($this->memberRepository->find($member['id']) ) {
+                if ($this->importService->isStored($member['id']) ) {
                     if($io->isDebug()) {
-                        $io->caution("Member ({$member['id']}) already imported, skipping");
+                        $io->caution("Member ({$member['id']}) already imported");
                     }
-                    continue;
+
+                    if ( !$isForced ) {
+                        continue;
+                    }
+
+                    // TODO: types
+                    //$this->importService->updateMemberData($member);
                 }
 
-                $entity = new Member();
+                /*$entity = new Member();
                 $entity->setId($member['id'])
                        ->setFullName($member['fullName'])
                        ->setCountry($member['country'])
                        ->setEpPoliticalGroup($member['politicalGroup'])
                        ->setNationalPoliticalGroup($member['nationalPoliticalGroup']);
 
-                $this->entityManager->persist($entity);
+                $this->entityManager->persist($entity);*/
 
                 if ($i % $batchSize) {
                     $this->entityManager->flush();
