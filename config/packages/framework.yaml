@@ -18,6 +18,14 @@ framework:
     php_errors:
         log: true
 
+    rate_limiter:
+        anonymous_api:
+            # only in symfony 6.4+
+            # otherwise the controller reserve tokens will fail
+            policy: 'sliding_window'
+            limit: 100
+            interval: '10 minutes'
+
 when@test:
     framework:
         test: true
@@ -27,3 +35,4 @@ when@test:
 when@prod:
     framework:
         http_cache: true
+        error_controller: App\Controller\ErrorController::renderJson
