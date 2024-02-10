@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Member;
+use App\Model\EpMember;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,6 +20,36 @@ class MemberRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Member::class);
+    }
+
+    public function storeNewEpMember(EpMember $member): Member
+    {
+        $entity = new Member();
+        $entity->setId($member->getId())
+               ->setFullName($member->getFullName())
+               ->setCountry($member->getCountry())
+               ->setEpPoliticalGroup($member->getPoliticalGroup())
+               ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
+
+        $this->getEntityManager()->persist($entity);
+        $this->getEntityManager()->flush();
+
+        return $entity;
+    }
+
+    public function updateMemberData(EpMember $member): Member
+    {
+        $entity = $this->find($member->getId());
+
+        $entity->setCountry($member->getCountry())
+               ->setFullName($member->getFullName())
+               ->setCountry($member->getCountry())
+               ->setEpPoliticalGroup($member->getPoliticalGroup())
+               ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
+
+        $this->getEntityManager()->flush();
+
+        return $entity;
     }
 
     public function findByIdWithContacts(int $id): array

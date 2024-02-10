@@ -3,9 +3,9 @@
 namespace App\Service;
 
 use App\Entity\Member;
+use App\Exception\AppException;
 use App\Model\EpMember;
 use App\Repository\MemberRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -14,7 +14,6 @@ class ImportService implements ImportInterface
 {
     public function __construct(
         private readonly MemberRepository       $memberRepository,
-        private readonly EntityManagerInterface $entityManager,
         private readonly HttpClientInterface    $httpClient,
     )
     {}
@@ -24,34 +23,24 @@ class ImportService implements ImportInterface
         return null !== $this->memberRepository->find($memberId);
     }
 
+    /** @throws  AppException */
     public function storeNewEpMember(EpMember $member): Member
     {
-        $entity = new Member();
-        $entity->setId($member->getId())
-            ->setFullName($member->getFullName())
-            ->setCountry($member->getCountry())
-            ->setEpPoliticalGroup($member->getPoliticalGroup())
-            ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
+        if ( $this->isStored($member->getId()) ) {
+            throw new AppException("Already exists", 417);
+        }
 
-        $this->entityManager->persist($entity);
-        $this->entityManager->flush();
-
-        return $entity;
+        return $this->memberRepository->storeNewEpMember($member);
     }
 
+    /** @throws  AppException */
     public function updateMemberData(EpMember $member): Member
     {
-        $entity = $this->memberRepository->find($member->getId());
+        if ( !$this->isStored($member->getId()) ) {
+            throw new AppException("Not found: {$member->getId()}", 417);
+        }
 
-        $entity->setCountry($member->getCountry())
-            ->setFullName($member->getFullName())
-            ->setCountry($member->getCountry())
-            ->setEpPoliticalGroup($member->getPoliticalGroup())
-            ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
-
-        $this->entityManager->flush();
-
-        return $entity;
+        return $this->memberRepository->updateMemberData($member);
     }
 
     /**
@@ -60,5 +49,21 @@ class ImportService implements ImportInterface
     public function getRawData(string $url) : ResponseInterface
     {
         return $this->httpClient->request("GET", $url);
+    }
+
+    public function parseRawData($content): EpMember
+    {
+        $content = new \SimpleXMLElement($content);
+
+        $content = (array)$content;
+
+        $memberModel = new EpMember();
+        $memberModel->setId($content['id'])
+                    ->setFullName($content['fullName'])
+                    ->setCountry($content['country'])
+                    ->setPoliticalGroup($content['politicalGroup'])
+                    ->setNationalPoliticalGroup($content['nationalPoliticalGroup']);
+
+        return $memberModel;
     }
 }

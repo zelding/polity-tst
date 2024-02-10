@@ -4,23 +4,14 @@ namespace App\Model;
 
 class EpMember
 {
-    public int $id;
-
+    public int    $id;
     public string $fullName;
-
     public string $country;
-
     public string $politicalGroup;
-
     public string $nationalPoliticalGroup;
 
-    public function __construct(array $member)
+    public function __construct()
     {
-        $this->setId($member['id'])
-            ->setFullName($member['fullName'])
-            ->setCountry($member['country'])
-            ->setPoliticalGroup($member['politicalGroup'])
-            ->setNationalPoliticalGroup($member['nationalPoliticalGroup']);
     }
 
     public function getId(): int

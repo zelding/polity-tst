@@ -3,7 +3,6 @@
 namespace App\Command;
 
 use App\Message\MemberImportMessage;
-use App\Model\EpMember;
 use App\Service\ImportInterface;
 use Exception;
 use SimpleXMLElement;
@@ -78,31 +77,34 @@ class ImportCommand extends Command
                 return Command::FAILURE;
             }
 
-            $classData = (array)$classData;
+            $pb = $io->createProgressBar($classData->mep->count());
 
-            $io->note("Found ".count($classData['mep']). " members");
-
-            foreach($classData['mep'] as $member) {
-                $member = (array)$member;
-
-                $memberModel = new EpMember($member);
+            foreach($classData->mep as $member) {
+                $memberModel = $this->importService->parseRawData($member->asXML());
 
                 if($isDryRun) {
-                    $io->writeln(
+                    $io->write(
                         sprintf("Would dispatch member: %s - %s", $memberModel->getFullName(), $memberModel->getCountry())
                     );
+                    $pb->advance();
                     continue;
                 }
 
                 $this->messageBus->dispatch(
                     new MemberImportMessage($memberModel, $isForced)
                 );
+
+                $pb->advance();
             }
         }
         catch (TransportExceptionInterface $exception) {
             $io->error("Connection error: `{$exception->getMessage()}`");
 
             return Command::FAILURE;
+        }
+        finally {
+            $pb->finish();
+            $io->writeln("");
         }
 
         return Command::SUCCESS;

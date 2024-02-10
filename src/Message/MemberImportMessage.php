@@ -8,7 +8,7 @@ class MemberImportMessage
 {
     public function __construct(
         protected readonly EpMember $memberData,
-        public readonly bool $allowUpdate
+        public    readonly bool     $allowUpdate
     )
     {}
 
