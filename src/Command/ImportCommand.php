@@ -42,7 +42,7 @@ class ImportCommand extends Command
             // for some fucking reason this is considered an ARRAY argument
             ->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Don\'t make any actual changes')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Overwrite/Update existing records')
-            ->addUsage('php bin/console import:ep_members 50 -d -f')
+            ->addUsage('-d -f 50')
         ;
     }
 

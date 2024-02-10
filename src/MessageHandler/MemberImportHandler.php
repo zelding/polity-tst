@@ -5,7 +5,9 @@ namespace App\MessageHandler;
 use App\Exception\AppException;
 use App\Message\MemberImportMessage;
 use App\Service\ImportInterface;
+use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 #[AsMessageHandler]
 class MemberImportHandler
@@ -26,23 +28,9 @@ class MemberImportHandler
 
             $this->importService->storeNewEpMember($importMessage->getMemberData());
         }
-        catch (AppException $exception) {
-            //TODO: log or something
-            //maybe there is a nicer way to send them to the failed queue
+        //TODO: log or something
+        catch (AppException|ORMException $exception) {
+            throw new UnrecoverableMessageHandlingException(previous: $exception);
         }
-
-        /*
-        if ( $this->importService->isStored($importMessage->getMemberData()->getId()) ) {
-            if ( $importMessage->allowUpdate ) {
-                // TODO: log or something
-                return;
-            }
-
-            $this->importService->updateMemberData($importMessage->getMemberData());
-            return;
-        }
-
-        $this->importService->storeNewEpMember($importMessage->getMemberData());
-        */
     }
 }
