@@ -11,6 +11,17 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class ImportServiceTest extends TestCase
 {
+    protected static $svc;
+
+    public static function setUpBeforeClass(): void
+    {
+        static::$svc = new class(null, null) extends ImportService {
+            public function __construct(
+                private readonly ?MemberRepository       $memberRepository,
+                private readonly ?HttpClientInterface    $httpClient,
+            ) {}
+        };
+    }
     /**
      * @dataProvider seedList
      * @param string $seed
@@ -18,17 +29,10 @@ class ImportServiceTest extends TestCase
      */
     public function testParseRawData(string $seed): void
     {
-        $td = $this::generateTestMemberData($seed);
+        $td = static::generateTestMemberData($seed);
 
-        $svc = new class(null, null) extends ImportService {
-            public function __construct(
-                private readonly ?MemberRepository       $memberRepository,
-                private readonly ?HttpClientInterface    $httpClient,
-            ) {}
-        };
-
-        $em = $svc->parseRawData($td->getXml());
-        $this->compareMembers($td->getModel(), $em);
+        $em = static::$svc->parseRawData($td->getXml());
+        static::compareMembers($td->getModel(), $em);
     }
 
     public static function seedList(): array
@@ -59,7 +63,7 @@ class ImportServiceTest extends TestCase
         return $td;
     }
 
-    private function compareMembers(EpMember $a, EpMember $b): void
+    private static function compareMembers(EpMember $a, EpMember $b): void
     {
         static::assertEquals($a->getId(), $b->getId());
         static::assertEquals($a->getCountry(), $b->getCountry());
