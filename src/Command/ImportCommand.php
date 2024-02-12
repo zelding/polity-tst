@@ -83,9 +83,9 @@ class ImportCommand extends Command
                 $memberModel = $this->importService->parseRawData($member->asXML());
 
                 if($isDryRun) {
-                    $io->write(
-                        sprintf("Would dispatch member: %s - %s", $memberModel->getFullName(), $memberModel->getCountry())
-                    );
+                    //$io->write(
+                    //    sprintf("Would dispatch member: %s - %s", $memberModel->getFullName(), $memberModel->getCountry())
+                    //);
                     $pb->advance();
                     continue;
                 }

@@ -27,12 +27,16 @@ class MemberRepository extends ServiceEntityRepository
         $entity = new Member();
         $entity->setId($member->getId())
                ->setFullName($member->getFullName())
+               ->setFirstName($member->getNameParts()[0])
+               ->setLastName($member->getNameParts()[1])
                ->setCountry($member->getCountry())
                ->setEpPoliticalGroup($member->getPoliticalGroup())
                ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
 
+        $this->getEntityManager()->beginTransaction();
         $this->getEntityManager()->persist($entity);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->commit();
 
         return $entity;
     }
@@ -43,11 +47,15 @@ class MemberRepository extends ServiceEntityRepository
 
         $entity->setCountry($member->getCountry())
                ->setFullName($member->getFullName())
+               ->setFirstName($member->getNameParts()[0])
+               ->setLastName($member->getNameParts()[1])
                ->setCountry($member->getCountry())
                ->setEpPoliticalGroup($member->getPoliticalGroup())
                ->setNationalPoliticalGroup($member->getNationalPoliticalGroup());
 
+        $this->getEntityManager()->beginTransaction();
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->commit();
 
         return $entity;
     }

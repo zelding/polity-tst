@@ -29,7 +29,7 @@ class ImportService implements ImportInterface
         if ( $this->isStored($member->getId()) ) {
             throw new AppException("Already exists", 417);
         }
-
+        $member->setNameParts($this->splitFullName($member->getFullName()));
         return $this->memberRepository->storeNewEpMember($member);
     }
 
@@ -39,7 +39,7 @@ class ImportService implements ImportInterface
         if ( !$this->isStored($member->getId()) ) {
             throw new AppException("Not found: {$member->getId()}", 417);
         }
-
+        $member->setNameParts($this->splitFullName($member->getFullName()));
         return $this->memberRepository->updateMemberData($member);
     }
 
@@ -59,11 +59,21 @@ class ImportService implements ImportInterface
 
         $memberModel = new EpMember();
         $memberModel->setId($content['id'])
+                    ->setNameParts($this->splitFullName($content['fullName']))
                     ->setFullName($content['fullName'])
                     ->setCountry($content['country'])
                     ->setPoliticalGroup($content['politicalGroup'])
                     ->setNationalPoliticalGroup($content['nationalPoliticalGroup']);
 
         return $memberModel;
+    }
+
+    /** @return array<string> */
+    protected function splitFullName(string $fullName): array
+    {
+        $fullName = trim($fullName);
+        $parts    = explode(" ", $fullName, 2);
+
+        return array(...$parts); // xD
     }
 }

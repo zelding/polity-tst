@@ -5,6 +5,7 @@ namespace App\MessageHandler;
 use App\Exception\AppException;
 use App\Message\MemberImportMessage;
 use App\Service\ImportInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
@@ -13,7 +14,8 @@ use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 class MemberImportHandler
 {
     public function __construct(
-        protected ImportInterface $importService
+        protected ImportInterface $importService,
+        protected readonly EntityManagerInterface $entityManager
     )
     {}
 
@@ -30,6 +32,10 @@ class MemberImportHandler
         }
         //TODO: log or something
         catch (AppException|ORMException $exception) {
+            if ($exception instanceof ORMException) {
+                $this->entityManager->rollback();
+            }
+
             throw new UnrecoverableMessageHandlingException(previous: $exception);
         }
     }

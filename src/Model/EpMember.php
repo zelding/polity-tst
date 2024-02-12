@@ -2,16 +2,32 @@
 
 namespace App\Model;
 
+use JetBrains\PhpStorm\Deprecated;
+
 class EpMember
 {
-    public int    $id;
-    public string $fullName;
-    public string $country;
-    public string $politicalGroup;
-    public string $nationalPoliticalGroup;
+    protected int    $id;
+    protected string $fullName;
+    protected string $country;
+    protected string $politicalGroup;
+    protected string $nationalPoliticalGroup;
+    /** @var array<string> */
+    protected array $nameParts;
 
     public function __construct()
     {
+    }
+
+    public function getNameParts(): array
+    {
+        return $this->nameParts;
+    }
+
+    public function setNameParts(array $nameParts): static
+    {
+        $this->nameParts = $nameParts;
+
+        return $this;
     }
 
     public function getId(): int
@@ -19,18 +35,20 @@ class EpMember
         return $this->id;
     }
 
-    public function setId(int $id): EpMember
+    public function setId(int $id): static
     {
         $this->id = $id;
         return $this;
     }
 
+    /** @deprecated */
     public function getFullName(): string
     {
         return $this->fullName;
     }
 
-    public function setFullName(string $fullName): EpMember
+    /** @deprecated */
+    public function setFullName(string $fullName): static
     {
         $this->fullName = $fullName;
         return $this;
@@ -41,7 +59,7 @@ class EpMember
         return $this->country;
     }
 
-    public function setCountry(string $country): EpMember
+    public function setCountry(string $country): static
     {
         $this->country = $country;
         return $this;
@@ -52,7 +70,7 @@ class EpMember
         return $this->politicalGroup;
     }
 
-    public function setPoliticalGroup(string $politicalGroup): EpMember
+    public function setPoliticalGroup(string $politicalGroup): static
     {
         $this->politicalGroup = $politicalGroup;
         return $this;
@@ -63,7 +81,7 @@ class EpMember
         return $this->nationalPoliticalGroup;
     }
 
-    public function setNationalPoliticalGroup(string $nationalPoliticalGroup): EpMember
+    public function setNationalPoliticalGroup(string $nationalPoliticalGroup): static
     {
         $this->nationalPoliticalGroup = $nationalPoliticalGroup;
         return $this;
