@@ -38,11 +38,9 @@ class ImportCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('batch_size', null, 'How many rows to insert at once', 50)
-            // for some fucking reason this is considered an ARRAY argument
             ->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Don\'t make any actual changes')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Overwrite/Update existing records')
-            ->addUsage('-d -f 50')
+            ->addUsage('-d -f')
         ;
     }
 
@@ -51,12 +49,6 @@ class ImportCommand extends Command
         $io        = new SymfonyStyle($input, $output);
         $isDryRun  = $input->getOption('dry-run');
         $isForced  = $input->getOption('force');
-        $batchSize = $input->getArgument('batch_size');
-
-        if (!$batchSize || $batchSize < 1 || !is_numeric($batchSize) ) {
-            $io->error("Batch size is invalid: $batchSize, should be a positive integer");
-            return Command::INVALID;
-        }
 
         $io->info("Importing ". $this->url);
         $io->note("Running in ".($isDryRun ? "Dry" : "Normal")." mode");
